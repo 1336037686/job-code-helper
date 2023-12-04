@@ -1,8 +1,9 @@
 package com.lgx.codehelper.module.qa.model.req;
 
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
 
 /**
  * @author 13360
@@ -11,18 +12,13 @@ import lombok.Data;
  * @date 2023-12-02 12:53
  */
 @Data
-public class QaChatRequest {
+public class QaChatMessageSendRequest extends QaChatItemRequest {
 
     /**
-     * 唯一标识
+     * 消息ID
      */
-    @NotNull(message = "id不能为空")
-    private Long id;
-
-    /**
-     * 聊天标题
-     */
-    private String title = "新建聊天";
+    @NotNull(message = "mid不能为空")
+    private Long mid;
 
     /**
      * 用户问题

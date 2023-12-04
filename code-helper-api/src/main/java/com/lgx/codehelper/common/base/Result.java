@@ -1,6 +1,7 @@
 package com.lgx.codehelper.common.base;
 
-import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
@@ -13,23 +14,23 @@ import java.io.Serializable;
  * Create by 2022-04-05 16:09 <br>
  * @description: Result <br>
  */
-@Schema(title = "统一返回值")
+@ApiModel("统一返回值")
 @Data
 @Accessors(chain = true)
 public class Result<T> implements Serializable {
 
     private static final long serialVersionUID = 97792549823353463L;
 
-    @Schema(title = "状态码")
+    @ApiModelProperty(value = "状态码", name = "code")
     private Integer code;
 
-    @Schema(title = "执行状态")
+    @ApiModelProperty(value = "执行状态", name = "success")
     private Boolean success;
 
-    @Schema(title = "响应消息")
+    @ApiModelProperty(value = "响应消息", name = "msg")
     private String msg;
 
-    @Schema(title = "响应数据")
+    @ApiModelProperty(value = "响应数据", name = "data")
     private T data;
 
     public Result() {}

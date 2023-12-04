@@ -1,9 +1,8 @@
 package com.lgx.codehelper.common.listener;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.lgx.codehelper.module.qa.model.req.QaChatRequest;
+import com.lgx.codehelper.module.qa.model.req.QaChatMessageSendRequest;
 import com.lgx.codehelper.util.SseUtil;
-import com.unfbx.chatgpt.entity.chat.BaseMessage;
 import com.unfbx.chatgpt.entity.chat.ChatCompletionResponse;
 import com.unfbx.chatgpt.entity.chat.Message;
 import lombok.SneakyThrows;
@@ -12,6 +11,7 @@ import okhttp3.Response;
 import okhttp3.ResponseBody;
 import okhttp3.sse.EventSource;
 import okhttp3.sse.EventSourceListener;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
@@ -28,11 +28,11 @@ public class OpenAiSseEventSourceListener extends EventSourceListener {
 
     private SseEmitter sseEmitter;
 
-    private QaChatRequest requestParam;
+    private QaChatMessageSendRequest requestParam;
 
     private StringBuffer completeMessage = new StringBuffer();
 
-    public OpenAiSseEventSourceListener(SseEmitter sseEmitter, QaChatRequest requestParam) {
+    public OpenAiSseEventSourceListener(SseEmitter sseEmitter, QaChatMessageSendRequest requestParam) {
         this.sseEmitter = sseEmitter;
         this.requestParam = requestParam;
     }
@@ -67,8 +67,9 @@ public class OpenAiSseEventSourceListener extends EventSourceListener {
         ObjectMapper mapper = new ObjectMapper();
         ChatCompletionResponse completionResponse = mapper.readValue(data, ChatCompletionResponse.class); // 读取Json
         try {
-            completeMessage.append(completionResponse.getChoices().get(0).getDelta());
             Message delta = completionResponse.getChoices().get(0).getDelta();
+            if (Objects.isNull(delta)) return;
+            completeMessage.append(StringUtils.isNotEmpty(delta.getContent()) ? delta.getContent() : "");
             sseEmitter.send(SseEmitter.event().id(completionResponse.getId()).data(delta).reconnectTime(30000));
         } catch (Exception e) {
             log.error("sse信息推送失败！");

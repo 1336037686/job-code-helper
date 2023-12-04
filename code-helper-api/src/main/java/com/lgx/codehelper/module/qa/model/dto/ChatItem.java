@@ -1,5 +1,7 @@
 package com.lgx.codehelper.module.qa.model.dto;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -18,11 +20,22 @@ public class ChatItem {
     /**
      * chat id
      */
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
     /**
      * title
      */
     private String title;
+
+    /**
+     * 模型
+     */
+    private String model;
+
+    /**
+     * 历史记录
+     */
+    private String history;
 
 }
