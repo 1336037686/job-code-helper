@@ -15,11 +15,10 @@ export default {
       data
     })
   },
-  chatDelete(data) {
+  chatDelete(id) {
     return request({
-      url: '/api/v1/qa/chat/delete',
-      method: 'post',
-      data
+      url: '/api/v1/qa/chat/delete/' + id,
+      method: 'post'
     })
   },
   chatQuery() {
@@ -40,8 +39,8 @@ export default {
       method: 'post'
     })
   },
-  messageCreate(id, mid, title) {
-    return 'http://localhost:8100/api/v1/qa/chat/message/create?id=' + id + '&mid=' + mid + '&title=' + title
+  messageCreate(id, mid) {
+    return 'http://localhost:8100/api/v1/qa/chat/message/create?id=' + id + '&mid=' + mid
   },
   messageSend(data) {
     return request({
