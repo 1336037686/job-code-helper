@@ -1,4 +1,4 @@
-package com.lgx.codehelper.config;
+package com.lgx.codehelper.common.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

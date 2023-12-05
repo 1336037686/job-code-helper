@@ -37,7 +37,7 @@ public class GlobalExceptionHandler {
     public Result<Object> handleException(Throwable e){
         // 打印堆栈信息
         log.error(ThrowableUtil.getStackTrace(e));
-        return Result.fail(ResultStatus.FAIL);
+        return Result.fail(ResultStatus.FAIL, e.getMessage());
     }
 
 

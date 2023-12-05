@@ -1,13 +1,23 @@
 package com.lgx.codehelper.module.auth.controller;
 
-import cn.hutool.system.UserInfo;
+import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.crypto.SecureUtil;
 import com.lgx.codehelper.common.base.Result;
-import com.lgx.codehelper.module.auth.model.request.LoginForm;
+import com.lgx.codehelper.common.base.ResultStatus;
+import com.lgx.codehelper.common.exception.ApiException;
+import com.lgx.codehelper.module.auth.domain.User;
+import com.lgx.codehelper.module.auth.model.request.LoginFormRequest;
+import com.lgx.codehelper.module.auth.model.request.RegisterFormRequest;
 import com.lgx.codehelper.module.auth.model.response.UserInfoResponse;
+import com.lgx.codehelper.module.auth.service.UserService;
+import com.lgx.codehelper.util.JWTUtil;
+import com.lgx.codehelper.util.ResultUtil;
 import org.springframework.web.bind.annotation.*;
 
+import javax.annotation.Resource;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * @author 13360
@@ -19,22 +29,53 @@ import java.util.Map;
 @RequestMapping ("/api/v1/auth")
 public class AuthController {
 
+    @Resource
+    private UserService userService;
+
+    /**
+     * 用户注册
+     * @param registerForm /
+     * @return /
+     */
+    @PostMapping("/user/register")
+    public Result<Object> doRegister(@RequestBody RegisterFormRequest registerForm) {
+        User user = new User();
+        BeanUtil.copyProperties(registerForm, user);
+        user.setPassword(SecureUtil.md5(user.getPassword()));
+        boolean save = userService.save(user);
+        return ResultUtil.returnOrThrow(save, "注册失败");
+    }
+
+    /**
+     * 用户登录
+     * @param loginForm /
+     * @return /
+     */
     @PostMapping("/user/login")
-    public Result<Map<String, String>> dologin(@RequestBody LoginForm loginForm) {
-        // 实际项目中，可以在这里进行用户名和密码的验证逻辑
-        // 如果验证通过，返回一个包含用户信息和token的JSON字符串
-        // 如果验证失败，可以返回一个错误信息
+    public Result<Map<String, String>> dologin(@RequestBody LoginFormRequest loginForm) {
+        User user = userService.lambdaQuery().eq(User::getUsername, loginForm.getUsername()).one();
+        if (Objects.isNull(user)) throw new ApiException(ResultStatus.FAIL, "当前用户不存在");
+        String md5Password = SecureUtil.md5(loginForm.getPassword());
+        if (!md5Password.equals(user.getPassword())) throw new ApiException(ResultStatus.FAIL, "用户名或密码错误");
+        String token = JWTUtil.createAccessToken(user.getId(), user.getUsername());
         Map<String, String> map = new HashMap<>();
-        map.put("token", "code-helper");
+        map.put("token", token);
         return Result.ok(map);
     }
 
-
+    /**
+     * 获取用户信息
+     * @return /
+     */
     @GetMapping("/user/info")
     public Result<UserInfoResponse> doGetUserInfo() {
         return Result.ok(new UserInfoResponse());
     }
 
+    /**
+     * 退出登录
+     * @return /
+     */
     @PostMapping("/user/logout")
     public Result<Boolean> doLogOut() {
         return Result.ok();

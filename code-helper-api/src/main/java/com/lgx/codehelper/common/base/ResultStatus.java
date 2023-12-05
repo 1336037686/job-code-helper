@@ -2,9 +2,6 @@ package com.lgx.codehelper.common.base;
 
 /**
  * 返回状态码
- * 000 000
- * 前三位，表示具体模块
- * 后三位，表示具体状态
  *
  * 通用成功：000 200
  * 通用失败：000 400
@@ -12,20 +9,19 @@ package com.lgx.codehelper.common.base;
  * @author LGX_TvT <br>
  * @version 1.0 <br>
  * Create by 2022-04-05 16:12 <br>
- * @description: JyResultStatus <br>
  */
 public enum ResultStatus {
 
     // region--- 0000 xxxx 基础状态码 ---
-    /**
-     * 0000 0200 成功
-     */
     SUCCESS(20000, "操作成功"),
 
-    /**
-     * 0000 0400 失败
-     */
-    FAIL(40000, "服务异常")
+    FAIL(40000, "服务异常"),
+
+    ACCOUNT_NOT_EXIST(50000, "登陆账号不存在"),
+
+    ILLEGAL_TOKEN(50008, "非法Token"),
+
+    TOKEN_EXPIRED(50014, "Token过期")
     // endregion------------------------
     ;
 

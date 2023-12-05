@@ -80,7 +80,7 @@ public class QaChatController {
         log.info("id: {}, title: {}, delete", qaChatItemRequest.getId(), qaChatItemRequest.getTitle());
         // 用户聊天
         SseUtil.CHAT_ITEMS.remove(qaChatItemRequest.getId());
-        return Result.build(ResultStatus.SUCCESS, "删除成功");
+        return Result.ok(true);
     }
 
     /**
@@ -95,7 +95,7 @@ public class QaChatController {
             ChatItem chatItem = SseUtil.CHAT_ITEMS.get(comparatorKey);
             res.add(chatItem);
         }
-        return Result.build(ResultStatus.SUCCESS, "查找成功", true, res);
+        return Result.ok(res);
     }
 
     /**
@@ -107,7 +107,17 @@ public class QaChatController {
         if (Objects.isNull(messages)) {
             messages = new CopyOnWriteArrayList<>();
         }
-        return Result.build(ResultStatus.SUCCESS, "查找成功", true, messages);
+        return Result.ok(messages);
+    }
+
+    /**
+     * 清除聊天列表
+     */
+    @PostMapping("/clean")
+    public Result<Boolean> doCleanChatMessages(@Valid @RequestBody QaChatItemRequest qaChatItemRequest) {
+        List<Message> messages = SseUtil.USER_MESSAGES.get(qaChatItemRequest.getId());
+        messages.clear();
+        return Result.ok(true);
     }
 
 
@@ -149,15 +159,34 @@ public class QaChatController {
             // 删除SSE和用户聊天
             SseUtil.SSE_EMITTERS.remove(qaChatMessageRequest.getMid());
         }
-        return Result.build(ResultStatus.SUCCESS, "关闭成功");
+        return Result.ok(true);
     }
 
     @PostMapping("/message/send")
     public Result<Object> doSend(@Valid @RequestBody QaChatMessageSendRequest qaChatMessageRequest) {
         log.info("id: {}, mid: {}, title: {}, send message:{}", qaChatMessageRequest.getId(), qaChatMessageRequest.getMid(), qaChatMessageRequest.getTitle(), qaChatMessageRequest.getMessage());
+
+        ChatItem chatItem = SseUtil.CHAT_ITEMS.get(qaChatMessageRequest.getId());
+
         List<Message> messages = new CopyOnWriteArrayList<>();
         if (SseUtil.USER_MESSAGES.containsKey(qaChatMessageRequest.getId())) {
-            messages = SseUtil.USER_MESSAGES.get(qaChatMessageRequest.getId());
+            List<Message> messageList = SseUtil.USER_MESSAGES.get(qaChatMessageRequest.getId());
+            if ("1".equals(chatItem.getHistory())) {
+                messages = new CopyOnWriteArrayList<>();
+            }
+            if ("2".equals(chatItem.getHistory())) {
+                messages = messageList.stream()
+                        .skip(Math.max(0, messageList.size() - 5))
+                        .collect(Collectors.toList());
+            }
+            if ("3".equals(chatItem.getHistory())) {
+                messages = messageList.stream()
+                        .skip(Math.max(0, messageList.size() - 10))
+                        .collect(Collectors.toList());
+            }
+            if ("4".equals(chatItem.getHistory())) {
+                messages = messageList;
+            }
         }
         Message currentMessage = Message.builder().content(qaChatMessageRequest.getMessage()).role(Message.Role.USER).build();
         messages.add(currentMessage);
@@ -167,7 +196,7 @@ public class QaChatController {
         if (Objects.isNull(currentSseEmitter)) throw new ApiException(ResultStatus.FAIL, "未创建连接");
         OpenAiSseEventSourceListener openAIEventSourceListener = new OpenAiSseEventSourceListener(currentSseEmitter, qaChatMessageRequest);
         ChatCompletion completion = ChatCompletion.builder()
-                .messages(messages).model(ChatCompletion.Model.GPT_3_5_TURBO_16K.getName())
+                .messages(messages).model(chatItem.getModel())
                 .build();
 
         OpenAiStreamClient openAiStreamClient = OpenAiUtil.getOpenAiStreamClient();
