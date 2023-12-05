@@ -1,10 +1,12 @@
-package com.lgx.codehelper.module.qa.model.req;
+package com.lgx.codehelper.module.qa.model.response;
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.unfbx.chatgpt.entity.chat.Message;
 import lombok.Data;
 
 import javax.validation.constraints.NotNull;
+import java.util.List;
 
 /**
  * @author 13360
@@ -13,7 +15,7 @@ import javax.validation.constraints.NotNull;
  * @date 2023-12-02 12:53
  */
 @Data
-public class QaChatMessageRequest {
+public class QaChatResponse {
 
     /**
      * 唯一标识
@@ -23,10 +25,13 @@ public class QaChatMessageRequest {
     private Long id;
 
     /**
-     * 消息ID
+     * 聊天标题
      */
-    @NotNull(message = "mid不能为空")
-    private Long mid;
+    private String title = "新建聊天";
 
+    /**
+     * 用户消息
+     */
+    private List<Message> message;
 
 }

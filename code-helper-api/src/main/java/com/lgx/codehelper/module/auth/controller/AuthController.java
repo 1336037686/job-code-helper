@@ -5,6 +5,8 @@ import cn.hutool.crypto.SecureUtil;
 import com.lgx.codehelper.common.base.Result;
 import com.lgx.codehelper.common.base.ResultStatus;
 import com.lgx.codehelper.common.exception.ApiException;
+import com.lgx.codehelper.common.filter.auth.UserInfo;
+import com.lgx.codehelper.common.filter.auth.UserInfoContextHolder;
 import com.lgx.codehelper.module.auth.domain.User;
 import com.lgx.codehelper.module.auth.model.request.LoginFormRequest;
 import com.lgx.codehelper.module.auth.model.request.RegisterFormRequest;
@@ -69,7 +71,11 @@ public class AuthController {
      */
     @GetMapping("/user/info")
     public Result<UserInfoResponse> doGetUserInfo() {
-        return Result.ok(new UserInfoResponse());
+        UserInfo userInfo = UserInfoContextHolder.getUserInfo();
+        User user = userService.getById(userInfo.getId());
+        UserInfoResponse response = new UserInfoResponse();
+        BeanUtil.copyProperties(user, response);
+        return Result.ok(response);
     }
 
     /**

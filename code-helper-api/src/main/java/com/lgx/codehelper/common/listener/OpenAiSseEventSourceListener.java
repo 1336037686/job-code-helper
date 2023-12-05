@@ -1,8 +1,10 @@
 package com.lgx.codehelper.common.listener;
 
+import cn.hutool.extra.spring.SpringUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.lgx.codehelper.module.qa.model.req.QaChatMessageSendRequest;
-import com.lgx.codehelper.util.SseUtil;
+import com.lgx.codehelper.common.filter.auth.UserInfoContextHolder;
+import com.lgx.codehelper.module.qa.model.request.QaChatMessageSendRequest;
+import com.lgx.codehelper.module.qa.service.MessageService;
 import com.unfbx.chatgpt.entity.chat.ChatCompletionResponse;
 import com.unfbx.chatgpt.entity.chat.Message;
 import lombok.SneakyThrows;
@@ -14,7 +16,6 @@ import okhttp3.sse.EventSourceListener;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-import java.util.List;
 import java.util.Objects;
 
 /**
@@ -28,6 +29,8 @@ public class OpenAiSseEventSourceListener extends EventSourceListener {
 
     private SseEmitter sseEmitter;
 
+    private MessageService messageService;
+
     private QaChatMessageSendRequest requestParam;
 
     private StringBuffer completeMessage = new StringBuffer();
@@ -35,6 +38,7 @@ public class OpenAiSseEventSourceListener extends EventSourceListener {
     public OpenAiSseEventSourceListener(SseEmitter sseEmitter, QaChatMessageSendRequest requestParam) {
         this.sseEmitter = sseEmitter;
         this.requestParam = requestParam;
+        this.messageService = SpringUtil.getBean(MessageService.class);
     }
 
     /**
@@ -56,10 +60,12 @@ public class OpenAiSseEventSourceListener extends EventSourceListener {
             log.info("OpenAI返回数据结束了");
             sseEmitter.send(SseEmitter.event().id("[DONE]").data("[DONE]").reconnectTime(30000));
             // 将返回消息添加到消息列表，可能再返回消息时候就被干掉
-            if (SseUtil.USER_MESSAGES.containsKey(requestParam.getId())) {
-                List<Message> messages = SseUtil.USER_MESSAGES.get(requestParam.getId());
-                messages.add(Message.builder().content(completeMessage.toString()).role(Message.Role.ASSISTANT).build());
-            }
+            com.lgx.codehelper.module.qa.domain.Message message = new com.lgx.codehelper.module.qa.domain.Message();
+            message.setUserId(requestParam.getUserId());
+            message.setChatId(requestParam.getId());
+            message.setContent(completeMessage.toString());
+            message.setRole(Message.Role.ASSISTANT.getName());
+            messageService.save(message);
             // 传输完成后自动关闭sse
             sseEmitter.complete();
             return;

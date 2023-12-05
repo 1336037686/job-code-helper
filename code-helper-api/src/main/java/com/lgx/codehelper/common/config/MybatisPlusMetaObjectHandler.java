@@ -8,6 +8,7 @@ import org.apache.ibatis.reflection.MetaObject;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 /**
  * MybatisPlus 自动填充配置
@@ -22,9 +23,10 @@ public class MybatisPlusMetaObjectHandler implements MetaObjectHandler {
 
     @Override
     public void insertFill(MetaObject metaObject) {
-        UserInfo userInfo = new UserInfo();
+        UserInfo userInfo = null;
         try {
             userInfo = UserInfoContextHolder.getUserInfo();
+            if (Objects.isNull(userInfo)) userInfo = new UserInfo();
         } catch (Exception ignored) {}
 
         this.strictInsertFill(metaObject, "createBy", Long.class, userInfo.getId()); // 起始版本 3.3.0(推荐使用)
@@ -36,9 +38,10 @@ public class MybatisPlusMetaObjectHandler implements MetaObjectHandler {
 
     @Override
     public void updateFill(MetaObject metaObject) {
-        UserInfo userInfo = new UserInfo();
+        UserInfo userInfo = null;
         try {
             userInfo = UserInfoContextHolder.getUserInfo();
+            if (Objects.isNull(userInfo)) userInfo = new UserInfo();
         } catch (Exception ignored) {}
 
         this.strictUpdateFill(metaObject, "updateBy", Long.class, userInfo.getId()); // 起始版本 3.3.0(推荐使用)

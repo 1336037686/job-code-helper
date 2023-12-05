@@ -15,12 +15,12 @@ import java.util.List;
 @Data
 public class UserInfoResponse {
 
-    private List<String> roles = List.of("admin");
+    private List<String> roles;
 
-    private String introduction = "I am a super administrator";
+    private String introduction;
 
-    private String avatar = "https://wpimg.wallstcn.com/f778738c-e4f8-4870-b634-56703b4acafe.gif";
+    private String avatar;
 
-    private String name = "Super Admin";
+    private String name;
 
 }

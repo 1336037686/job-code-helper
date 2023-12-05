@@ -1,13 +1,20 @@
 package com.lgx.codehelper.module.qa.controller;
 
+import cn.hutool.core.bean.BeanUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.lgx.codehelper.common.base.Result;
 import com.lgx.codehelper.common.base.ResultStatus;
 import com.lgx.codehelper.common.exception.ApiException;
+import com.lgx.codehelper.common.filter.auth.UserInfoContextHolder;
 import com.lgx.codehelper.common.listener.OpenAiSseEventSourceListener;
+import com.lgx.codehelper.module.qa.domain.Chat;
 import com.lgx.codehelper.module.qa.model.dto.ChatItem;
-import com.lgx.codehelper.module.qa.model.req.QaChatItemRequest;
-import com.lgx.codehelper.module.qa.model.req.QaChatMessageRequest;
-import com.lgx.codehelper.module.qa.model.req.QaChatMessageSendRequest;
+import com.lgx.codehelper.module.qa.model.request.QaChatItemRequest;
+import com.lgx.codehelper.module.qa.model.request.QaChatMessageRequest;
+import com.lgx.codehelper.module.qa.model.request.QaChatMessageSendRequest;
+import com.lgx.codehelper.module.qa.service.ChatService;
+import com.lgx.codehelper.module.qa.service.MessageService;
+import com.lgx.codehelper.module.qa.service.QaChatService;
 import com.lgx.codehelper.util.OpenAiUtil;
 import com.lgx.codehelper.util.SseUtil;
 import com.unfbx.chatgpt.OpenAiStreamClient;
@@ -17,6 +24,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import javax.annotation.Resource;
 import javax.validation.Valid;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -39,19 +47,29 @@ import java.util.stream.Collectors;
 @Slf4j
 public class QaChatController {
 
+    @Resource
+    private QaChatService qaChatService;
+
+    @Resource
+    private ChatService chatService;
+
+    @Resource
+    private MessageService messageService;
+
     /**
      * 创建聊天
      * @param qaChatItemRequest /
-     * @return
+     * @return /
      */
     @PostMapping("/create")
-    public Result<ChatItem> doCreateQaChat(@Valid @RequestBody QaChatItemRequest qaChatItemRequest) {
-        ChatItem chatItem = new ChatItem(qaChatItemRequest.getId(), qaChatItemRequest.getTitle(), qaChatItemRequest.getModel(), qaChatItemRequest.getHistory());
-        // 如果当前聊天不存在则创建
-        if (!SseUtil.CHAT_ITEMS.containsKey(qaChatItemRequest.getId())) {
-            SseUtil.CHAT_ITEMS.put(qaChatItemRequest.getId(), chatItem);
-        }
-        return Result.ok(chatItem);
+    public Result<Chat> doCreateQaChat(@Valid @RequestBody QaChatItemRequest qaChatItemRequest) {
+        log.info("id: {}, title: {}, create", qaChatItemRequest.getId(), qaChatItemRequest.getTitle());
+        Chat chat = new Chat();
+        BeanUtil.copyProperties(qaChatItemRequest, chat);
+        chat.setUserId(UserInfoContextHolder.getUserInfo().getId());
+        boolean save = chatService.save(chat);
+        if (Boolean.FALSE.equals(save)) throw new ApiException(ResultStatus.FAIL, "创建失败");
+        return Result.ok(chat);
     }
 
     /**
@@ -60,53 +78,50 @@ public class QaChatController {
      * @return
      */
     @PostMapping("/update")
-    public Result<ChatItem> doUpdateQaChat(@Valid @RequestBody QaChatItemRequest qaChatItemRequest) {
-        if (!SseUtil.CHAT_ITEMS.containsKey(qaChatItemRequest.getId())) {
+    public Result<Chat> doUpdateQaChat(@Valid @RequestBody QaChatItemRequest qaChatItemRequest) {
+        log.info("id: {}, title: {}, update", qaChatItemRequest.getId(), qaChatItemRequest.getTitle());
+        Chat chat = chatService.getById(qaChatItemRequest.getId());
+        if (Objects.isNull(chat)) {
             throw new ApiException(ResultStatus.FAIL, "当前聊天不存在");
         }
-        ChatItem chatItem = SseUtil.CHAT_ITEMS.get(qaChatItemRequest.getId());
-        chatItem.setTitle(qaChatItemRequest.getTitle());
-        chatItem.setModel(qaChatItemRequest.getModel());
-        chatItem.setHistory(qaChatItemRequest.getHistory());
-        return Result.ok(chatItem);
+        BeanUtil.copyProperties(qaChatItemRequest, chat);
+        boolean update = chatService.updateById(chat);
+        if (Boolean.FALSE.equals(update)) throw new ApiException(ResultStatus.FAIL, "更新失败");
+        return Result.ok(chat);
     }
 
     /**
      * 删除聊天
      * @param qaChatItemRequest /
      */
-    @PostMapping("/delete")
-    public Result<Object> doDeleteQaChat(@Valid @RequestBody QaChatItemRequest qaChatItemRequest) {
-        log.info("id: {}, title: {}, delete", qaChatItemRequest.getId(), qaChatItemRequest.getTitle());
-        // 用户聊天
-        SseUtil.CHAT_ITEMS.remove(qaChatItemRequest.getId());
-        return Result.ok(true);
+    @PostMapping("/delete/{id}")
+    public Result<Object> doDeleteQaChat(@PathVariable("id") Long id) {
+        log.info("id: {}, delete", id);
+        boolean remove = chatService.removeById(id);
+        if (Boolean.FALSE.equals(remove)) throw new ApiException(ResultStatus.FAIL, "删除失败");
+        return Result.ok(remove);
     }
 
     /**
      * 获取聊天列表
      */
     @PostMapping("/query")
-    public Result<List<ChatItem>> doQueryChatList() {
-        ConcurrentHashMap.KeySetView<Long, ChatItem> keySet = SseUtil.CHAT_ITEMS.keySet();
-        List<Long> comparatorKeys = keySet.stream().sorted(Comparator.reverseOrder()).collect(Collectors.toList());
-        List<ChatItem> res = new ArrayList<>();
-        for (Long comparatorKey : comparatorKeys) {
-            ChatItem chatItem = SseUtil.CHAT_ITEMS.get(comparatorKey);
-            res.add(chatItem);
-        }
-        return Result.ok(res);
+    public Result<List<Chat>> doQueryChatList() {
+        List<Chat> chats = chatService.lambdaQuery()
+                .eq(Chat::getUserId, UserInfoContextHolder.getUserInfo().getId())
+                .orderByDesc(Chat::getCreateTime).list();
+        return Result.ok(chats);
     }
 
     /**
      * 获取聊天记录
      */
     @PostMapping("/query/{id}")
-    public Result<List<Message>> doQueryChatMessageList(@PathVariable("id") Long id) {
-        List<Message> messages = SseUtil.USER_MESSAGES.get(id);
-        if (Objects.isNull(messages)) {
-            messages = new CopyOnWriteArrayList<>();
-        }
+    public Result<List<com.lgx.codehelper.module.qa.domain.Message>> doQueryChatMessageList(@PathVariable("id") Long id) {
+        List<com.lgx.codehelper.module.qa.domain.Message> messages = messageService.lambdaQuery()
+                .eq(com.lgx.codehelper.module.qa.domain.Message::getChatId, id)
+                .eq(com.lgx.codehelper.module.qa.domain.Message::getUserId, UserInfoContextHolder.getUserInfo().getId())
+                .orderByAsc(com.lgx.codehelper.module.qa.domain.Message::getCreateTime).list();
         return Result.ok(messages);
     }
 
@@ -115,8 +130,11 @@ public class QaChatController {
      */
     @PostMapping("/clean")
     public Result<Boolean> doCleanChatMessages(@Valid @RequestBody QaChatItemRequest qaChatItemRequest) {
-        List<Message> messages = SseUtil.USER_MESSAGES.get(qaChatItemRequest.getId());
-        messages.clear();
+        LambdaQueryWrapper<com.lgx.codehelper.module.qa.domain.Message> wrapper = new LambdaQueryWrapper<>();
+        wrapper .eq(com.lgx.codehelper.module.qa.domain.Message::getChatId, qaChatItemRequest.getId());
+        wrapper.eq(com.lgx.codehelper.module.qa.domain.Message::getUserId, UserInfoContextHolder.getUserInfo().getId());
+        boolean remove = messageService.remove(wrapper);
+        if (Boolean.FALSE.equals(remove)) throw new ApiException(ResultStatus.FAIL, "清除失败");
         return Result.ok(true);
     }
 
@@ -156,51 +174,15 @@ public class QaChatController {
         SseEmitter sse = SseUtil.SSE_EMITTERS.get(qaChatMessageRequest.getMid());
         if (sse != null) {
             sse.complete();
-            // 删除SSE和用户聊天
-            SseUtil.SSE_EMITTERS.remove(qaChatMessageRequest.getMid());
+            SseUtil.SSE_EMITTERS.remove(qaChatMessageRequest.getMid()); // 删除SSE和用户聊天
         }
         return Result.ok(true);
     }
 
     @PostMapping("/message/send")
     public Result<Object> doSend(@Valid @RequestBody QaChatMessageSendRequest qaChatMessageRequest) {
-        log.info("id: {}, mid: {}, title: {}, send message:{}", qaChatMessageRequest.getId(), qaChatMessageRequest.getMid(), qaChatMessageRequest.getTitle(), qaChatMessageRequest.getMessage());
-
-        ChatItem chatItem = SseUtil.CHAT_ITEMS.get(qaChatMessageRequest.getId());
-
-        List<Message> messages = new CopyOnWriteArrayList<>();
-        if (SseUtil.USER_MESSAGES.containsKey(qaChatMessageRequest.getId())) {
-            List<Message> messageList = SseUtil.USER_MESSAGES.get(qaChatMessageRequest.getId());
-            if ("1".equals(chatItem.getHistory())) {
-                messages = new CopyOnWriteArrayList<>();
-            }
-            if ("2".equals(chatItem.getHistory())) {
-                messages = messageList.stream()
-                        .skip(Math.max(0, messageList.size() - 5))
-                        .collect(Collectors.toList());
-            }
-            if ("3".equals(chatItem.getHistory())) {
-                messages = messageList.stream()
-                        .skip(Math.max(0, messageList.size() - 10))
-                        .collect(Collectors.toList());
-            }
-            if ("4".equals(chatItem.getHistory())) {
-                messages = messageList;
-            }
-        }
-        Message currentMessage = Message.builder().content(qaChatMessageRequest.getMessage()).role(Message.Role.USER).build();
-        messages.add(currentMessage);
-        SseUtil.USER_MESSAGES.put(qaChatMessageRequest.getId(), messages);
-
-        SseEmitter currentSseEmitter = SseUtil.SSE_EMITTERS.get(qaChatMessageRequest.getMid());
-        if (Objects.isNull(currentSseEmitter)) throw new ApiException(ResultStatus.FAIL, "未创建连接");
-        OpenAiSseEventSourceListener openAIEventSourceListener = new OpenAiSseEventSourceListener(currentSseEmitter, qaChatMessageRequest);
-        ChatCompletion completion = ChatCompletion.builder()
-                .messages(messages).model(chatItem.getModel())
-                .build();
-
-        OpenAiStreamClient openAiStreamClient = OpenAiUtil.getOpenAiStreamClient();
-        openAiStreamClient.streamChatCompletion(completion, openAIEventSourceListener);
+        log.info("id: {}, mid: {}, send message:{}", qaChatMessageRequest.getId(), qaChatMessageRequest.getMid(), qaChatMessageRequest.getMessage());
+        qaChatService.send(qaChatMessageRequest);
         return Result.ok();
     }
 
