@@ -28,6 +28,12 @@ export default {
       method: 'post'
     })
   },
+  chatClean() {
+    return request({
+      url: '/api/v1/qa/chat/clean',
+      method: 'post'
+    })
+  },
   chatQueryById(id) {
     return request({
       url: '/api/v1/qa/chat/query/' + id,

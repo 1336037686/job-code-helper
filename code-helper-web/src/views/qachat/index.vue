@@ -2,7 +2,7 @@
   <el-row class="panel">
     <el-col :span="4">
       <div style="padding: 10px">
-        <el-card shadow="always" class="handle-panel">
+        <el-card shadow="hover" class="handle-panel">
           <p>
             <el-button type="success" icon="el-icon-plus" style="width: 100%">新建聊天</el-button>
           </p>
@@ -18,7 +18,7 @@
           </p>
         </el-card>
         <div class="chat-list-panel">
-          <el-card shadow="always"  v-for="(item, index) in chatList" :key="index" class="chat-item" @click.native="chatClick(item.id)">
+          <el-card shadow="hover"  v-for="(item, index) in chatList" :key="index" class="chat-item" @click.native="chatClick(item.id)">
             {{ item.title }}
           </el-card>
         </div>
@@ -26,7 +26,7 @@
     </el-col>
     <el-col :span="20">
       <div style="padding: 10px">
-        <el-card shadow="always" class="message-panel">
+        <el-card shadow="hover" class="message-panel">
           <el-container style="height: 88vh">
             <el-header class="centered-header">AI Chat</el-header>
             <el-main ref="scrollContainer" style="padding: 10px; overflow-y: auto;height: 50vh">
@@ -245,6 +245,7 @@ export default {
 <style lang="scss" scoped>
 
 .panel {
+  margin-top: 10px;
   background-color: white;
 }
 
