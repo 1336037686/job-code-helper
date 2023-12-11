@@ -1,30 +1,19 @@
 package com.lgx.codehelper.common.filter.auth;
 
-import cn.hutool.crypto.SecureUtil;
 import cn.hutool.extra.spring.SpringUtil;
 import com.lgx.codehelper.common.base.Result;
 import com.lgx.codehelper.common.base.ResultStatus;
-import com.lgx.codehelper.common.properties.JwtProperties;
 import com.lgx.codehelper.common.properties.WhitelistsProperties;
 import com.lgx.codehelper.util.JWTUtil;
 import com.lgx.codehelper.util.ResponseUtil;
-import org.springframework.stereotype.Component;
 
 import javax.servlet.*;
-import javax.servlet.annotation.WebFilter;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Arrays;
 
-/**
- * @author 13360
- * @version 1.0
- * @description: TODO
- * @date 2023-12-05 08:42
- */
-@Component
-@WebFilter("/*") // 设置拦截的路径，这里设置为拦截所有路径
+
 public class AuthFilter implements Filter {
 
     @Override
@@ -38,7 +27,6 @@ public class AuthFilter implements Filter {
             chain.doFilter(request, response);
             return;
         }
-
 
         try {
             // 在这里进行权限判断和Token信息的处理
